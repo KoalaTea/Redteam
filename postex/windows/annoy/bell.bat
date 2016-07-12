@@ -1,0 +1,3 @@
+:g
+ECHO 
+goto g

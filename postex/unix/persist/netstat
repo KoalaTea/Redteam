@@ -1,0 +1,27 @@
+#!/usr/bin/python
+import os
+import sys
+import re
+import subprocess
+
+#proc = subprocess.Popen(["netstat"], stdout=subprocess.PIPE, shell=True)
+#(out, err) = proc.communicate()
+#print "program output:", out
+temp=str(sys.argv)
+sys.argv[0]="/usr/local/notstat"
+cmd=' '.join(sys.argv)
+out=os.popen(cmd).read()
+test=out.split("\n")
+regex = re.compile(r'STAB')
+for line in test:
+	if regex.search(line) is not None:
+		pass
+	else:
+		print line
+'''
+sys.argv[0]="/usr/local/notstat"
+cmd=' '.join(sys.argv)
+out = subprocess.check_output(cmd, shell=True)
+for line in out:
+	print line
+'''

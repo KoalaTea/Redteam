@@ -1,0 +1,7 @@
+*.tar
+*.swp
+*.cur
+*.png
+*.jpg
+postex/mal/
+*.txt

@@ -1,0 +1,7 @@
+on ready {
+	println("Hosts:               " . size(hosts()));
+	println("Sessions:            " . size(hosts()));
+	println("Services:            " . size(services()));
+	println("Credentials:         " . size(credentials()));
+	quit()
+}

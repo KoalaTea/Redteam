@@ -1,0 +1,36 @@
+#!/usr/bin/expect -f
+
+set ip "10.2.143.20"
+set hostname [lindex $argv 0]
+set port "6667"
+set username "Admin"
+set password "changeme"
+
+spawn ssh -o StrictHostKeyChecking=no $username\@$hostname
+
+expect {
+timeout { send_user "\nTimeout Exceeded - Check Host\n"; exit 1 }
+eof { send_user "\vnSSH Connection To $hostname Failed\n"; exit 1 }
+"*#" {}
+"*assword:" {
+send "$password\n"
+}
+}
+
+expect {
+default { send_user "\nEnable Mode Failed - Check Password\n"; exit 1 }
+"*#" {}
+"*>" {
+send "enable\n"
+expect {
+"*#" {}
+"*assword" {
+send "$password"
+}
+}
+}
+}
+
+send "tclsh flash0:/bot.tcl $ip $port"
+
+exit

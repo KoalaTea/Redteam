@@ -1,0 +1,99 @@
+#!/usr/bin/expect -f
+
+set ip "10.10.9.143"
+set hostname [lindex $argv 0]
+set username "root"
+set user2 "root"
+set password "changeme"
+set prep "10.10."
+set router ".1"
+set pivot ".12"
+set hostname2 [format "%s%s%s" $prep $hostname $pivot]
+set hostname3 [format "%s%s%s" $prep $hostname $router]
+
+spawn ssh -o StrictHostKeyChecking=no $username\@$hostname2
+
+expect {
+timeout { send_user "\nTimeout Exceeded - Check Host\n"; exit 1 } 
+eof { send_user "\vnSSH Connection To $hostname2 Failed\n";
+        spawn telnet $hostname2
+        expect {
+        timeout { send_user "\nTelnet failed Timeout\n"; exit 1 } 
+        eof { send_user "\nTelnet Connection failed\n"; exit 1 } 
+        default { send_user "\nTelnet login failed check user\n"; exit 1 } 
+        "*#" {}
+        "*assword:" {
+        send "$password\n"
+        }
+        "*sername:" {
+        send "$username\n"
+        expect {
+                "*#" {}
+                "*assword:" {
+                send "$password\n"
+                }
+        }
+        }
+        }
+}
+"*#" {
+send "ssh $user2@$hostname3"
+}
+"*assword:" {
+send "$password\n"
+}
+}
+
+expect {
+timeout { send_user "\nTimeout Exceeded - Check Host\n"; exit 1 }
+eof { send_user "\vnSSH Connection To $hostname3 Failed\n";
+        send "telnet $hostname3"
+        expect {
+        timeout { send_user "\nTelnet failed Timeout\n"; exit 1 } 
+        eof { send_user "\nTelnet Connection failed\n"; exit 1 } 
+	default { send_user "\nTelnet login failed check user\n"; exit 1 }
+        "*#" {}
+        "*assword:" {
+        send "$password\n"
+        }
+	"*sername:" {
+	send "$username\n"
+	expect {
+		"*#" {}
+		"*assword:" {
+		send "$password\n"
+		}
+	}
+        }
+	}
+}
+"*#" {
+send "ssh $user2@$hostname3"
+expect {
+	"*#" {}
+	"*assword" {
+		send "$password\n"
+	}
+}
+"*assword:" {
+send "$password\n"
+}
+}
+
+
+
+expect {
+default { send_user "\nEnable Mode Failed - Check Password\n"; exit 1 }
+"*#" {}
+"*>" {
+send "enable\n"
+expect "*#"
+}
+}
+
+send "tclsh tftp://$ip/deploy.tcl\n"
+send "tclsh tftp://$ip/deploy.tcl\n"
+expect "*#"
+send "copy running-config startup-config\n"
+expect "*#"
+exit

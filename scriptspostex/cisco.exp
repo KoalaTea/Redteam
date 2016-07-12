@@ -1,0 +1,59 @@
+#!/usr/bin/expect -f
+
+set ip "10.10.9.143"
+set hostname [lindex $argv 0]
+set username "Teaffanny"
+set password "Tra!nday"
+set enablepass "goawayjoejoe"
+
+spawn ssh -o StrictHostKeyChecking=no $username\@$hostname
+
+expect {
+timeout { send_user "\nTimeout Exceeded - Check Host\n"; exit 1 }
+eof { send_user "\vnSSH Connection To $hostname Failed\n";
+        spawn telnet $hostname
+        expect {
+        timeout { send_user "\nTelnet failed Timeout\n"; exit 1 } 
+        eof { send_user "\nTelnet Connection failed\n"; exit 1 } 
+	default { send_user "\nTelnet login failed check user\n"; exit 1 }
+        "*#" {}
+        "*assword:" {
+        send "$password\n"
+        }
+	"*sername:" {
+	send "$username\n"
+	expect {
+		"*#" {}
+		"*assword:" {
+		send "$password\n"
+		}
+	}
+        }
+	}
+}
+"*#" {}
+"*assword:" {
+send "$password\n"
+}
+}
+
+expect {
+default { send_user "\nEnable Mode Failed - Check Password\n"; exit 1 }
+"*#" {}
+"*>" {
+send "enable\n"
+expect {
+"*assword" { send "$enablepass\n" }
+"*#" {}
+}
+expect "*#"
+}
+}
+
+send "reload\n"
+expect "*#"
+send "yes\n"
+expect "*]"
+send "k\n"
+expect "*#"
+exit
